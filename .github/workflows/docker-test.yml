@@ -16,13 +16,14 @@ jobs:
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - name: Install dependencies with uv
+        run: uv pip install -r requirements.txt
+
       - name: Build Docker image
-        run: |
-          docker build -t mlx-llm-server:ci .
+        run: docker build -t mlx-llm-server:ci .
 
       - name: Run container
-        run: |
-          docker run -d --name mlx_test -p 9123:9123 mlx-llm-server:ci
+        run: docker run -d --name mlx_test -p 9123:9123 mlx-llm-server:ci
 
       - name: Health check
         run: |
@@ -33,6 +34,9 @@ jobs:
             sleep 2;
           done;
           echo "Timed out waiting for health check"; docker logs mlx_test; exit 1
+
+      - name: Run Python tests with uv
+        run: uv run pytest  # adjust if your test command is different
 
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.21.0
