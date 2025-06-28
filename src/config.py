@@ -2,7 +2,7 @@
 Configuration for MLX LLM Server
 """
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseSettings, Field, validator
 
 
@@ -11,39 +11,35 @@ class ServerConfig(BaseSettings):
     
     # Server settings
     host: str = Field(default="0.0.0.0", env="SERVER_HOST")
-    port: int = Field(default=443, env="SERVER_PORT")
+    port: int = Field(default=8000, env="SERVER_PORT")
     workers: int = Field(default=1, env="SERVER_WORKERS")  # MLX works best with single worker
     
-    # SSL/TLS settings
-    ssl_certfile: Path = Field(default=Path.home() / ".ssl" / "dragon.crt", env="SSL_CERT")
-    ssl_keyfile: Path = Field(default=Path.home() / ".ssl" / "dragon.key", env="SSL_KEY")
+    # SSL/TLS settings (optional)
+    ssl_certfile: Optional[Path] = Field(default=None, env="SSL_CERT")
+    ssl_keyfile: Optional[Path] = Field(default=None, env="SSL_KEY")
     
     # Domain configuration
-    primary_domain: str = Field(default="libraxis.cloud", env="PRIMARY_DOMAIN")
-    tailscale_domain: str = Field(default="dragon.fold-antares.ts.net", env="TAILSCALE_DOMAIN")
+    primary_domain: str = Field(default="localhost", env="PRIMARY_DOMAIN")
+    tailscale_domain: str = Field(default="", env="TAILSCALE_DOMAIN")
     allowed_origins: List[str] = Field(
         default=[
-            "https://libraxis.cloud",
-            "https://dragon.fold-antares.ts.net",
-            "https://whisplbrx.libraxis.cloud",
-            "https://forkmeASAPp.libraxis.cloud",
-            "https://anydatanext.libraxis.cloud",
-            "https://lbrxvoice.libraxis.cloud",
-            "https://vista.libraxis.cloud",
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
         ],
         env="ALLOWED_ORIGINS"
     )
     
     # Model settings
     models_dir: Path = Field(
-        default=Path.home() / ".lmstudio" / "models",
+        default=Path("./models"),
         env="MODELS_DIR"
     )
     default_model: str = Field(
-        default="nemotron-ultra",  # Use alias from model_config
+        default="llama-3.2-3b",  # Use alias from model_config
         env="DEFAULT_MODEL"
     )
-    max_model_memory_gb: int = Field(default=400, env="MAX_MODEL_MEMORY_GB")
+    max_model_memory_gb: int = Field(default=24, env="MAX_MODEL_MEMORY_GB")
     
     # API settings
     api_prefix: str = Field(default="/api/v1", env="API_PREFIX")
@@ -69,17 +65,23 @@ class ServerConfig(BaseSettings):
     metrics_port: int = Field(default=9090, env="METRICS_PORT")
     
     # Voice API routing (for future split)
-    voice_api_host: str = Field(default="100.75.30.90", env="VOICE_API_HOST")
+    voice_api_host: str = Field(default="", env="VOICE_API_HOST")
     voice_services: List[str] = Field(
-        default=["whisplbrx", "lbrxvoice", "lbrxvoicepro"],
+        default=[],
         env="VOICE_SERVICES"
     )
     
-    @validator("ssl_certfile", "ssl_keyfile", "models_dir")
-    def validate_paths(cls, v: Path) -> Path:
-        """Ensure paths exist"""
-        if not v.exists():
-            raise ValueError(f"Path {v} does not exist")
+    @validator("ssl_certfile", "ssl_keyfile")
+    def validate_ssl_paths(cls, v: Optional[Path]) -> Optional[Path]:
+        """Ensure SSL paths exist if provided"""
+        if v and not v.exists():
+            raise ValueError(f"SSL path {v} does not exist")
+        return v
+    
+    @validator("models_dir")
+    def validate_models_dir(cls, v: Path) -> Path:
+        """Create models directory if it doesn't exist"""
+        v.mkdir(parents=True, exist_ok=True)
         return v
     
     @validator("jwt_secret")
