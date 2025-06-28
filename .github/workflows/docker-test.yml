@@ -35,7 +35,7 @@ jobs:
           echo "Timed out waiting for health check"; docker logs mlx_test; exit 1
 
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@latest
+        uses: aquasecurity/trivy-action@0.21.0
         with:
           image-ref: mlx-llm-server:ci
           format: table
