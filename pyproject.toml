@@ -1,0 +1,59 @@
+[project]
+name = "mlx-llm-server"
+version = "1.0.0"
+description = "Production LLM server for VISTA and LibraXis services"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "mlx>=0.26.0",
+    "mlx-lm>=0.25.0",
+    "httpx>=0.28.0",
+    "redis>=5.0.0",
+    "prometheus-client>=0.22.0",
+    "python-multipart>=0.0.20",
+    "slowapi>=0.1.9",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "transformers>=4.45.0",
+    "accelerate>=1.2.0",
+    "sentencepiece>=0.2.0",
+    "protobuf>=5.29.0",
+    "numpy<2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.14.0",
+    "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.1",
+]

@@ -1,0 +1,30 @@
+[Unit]
+Description=MLX LLM Server for VISTA and LibraXis Services
+After=network.target redis.service
+
+[Service]
+Type=exec
+User=polyversai
+Group=staff
+WorkingDirectory=/Users/polyversai/hosted_dev/mlx_lm_servers
+Environment="PATH=/Users/polyversai/.local/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="HOME=/Users/polyversai"
+ExecStart=/Users/polyversai/.local/bin/uv run python -m src.main
+Restart=always
+RestartSec=10
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+# Allow high memory usage for LLMs
+MemoryMax=450G
+CPUQuota=800%
+
+# Logging
+StandardOutput=append:/var/log/mlx-llm-server/server.log
+StandardError=append:/var/log/mlx-llm-server/error.log
+
+[Install]
+WantedBy=multi-user.target
