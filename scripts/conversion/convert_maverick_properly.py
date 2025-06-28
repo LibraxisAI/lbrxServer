@@ -5,7 +5,9 @@ Custom conversion script for Llama-4-Maverick with better error handling
 import os
 import sys
 
-sys.path.append('/Users/polyversai/.lmstudio/mlx_lm')
+# Add MLX_LM path from environment or default location
+mlx_lm_path = os.environ.get('MLX_LM_PATH', os.path.expanduser('~/.lmstudio/mlx_lm'))
+sys.path.append(mlx_lm_path)
 
 import mlx.core as mx
 
@@ -18,7 +20,9 @@ def convert_with_checkpointing():
     """Convert model with better memory management"""
 
     source = "meta-llama/Llama-4-Maverick-17B-128E-Instruct"
-    target = "/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5-fixed"
+    # Use environment variable or default location
+    models_dir = os.environ.get('LMSTUDIO_MODELS_DIR', os.path.expanduser('~/.lmstudio/models'))
+    target = os.path.join(models_dir, 'LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5-fixed')
 
     print(f"Converting {source} to {target}")
     print("This will take time but should work...")

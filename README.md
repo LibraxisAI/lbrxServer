@@ -1,5 +1,11 @@
 # MLX LLM Server
 
+[![CI](https://github.com/LibraxisAI/mlx-llm-server/actions/workflows/ci.yml/badge.svg)](https://github.com/LibraxisAI/mlx-llm-server/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![MLX](https://img.shields.io/badge/MLX-0.26.0+-green.svg)](https://github.com/ml-explore/mlx)
+[![uv](https://img.shields.io/badge/uv-latest-orange.svg)](https://github.com/astral-sh/uv)
+
 Production-ready LLM server by LibraxisAI. Empowered by MLX on Apple Silicon. Built specifically for M3 Ultra (512GB) with native DeciLMForCausalLM support and integrated ChukSessions for conversation management.
 
 ## Features
@@ -187,7 +193,25 @@ mlx-llm-server/
 # Run specific checks
 uv run ruff check .        # Linting
 uv run ruff format .       # Format code
-uv run pytest             # Run tests (when available)
+uv run pytest tests/ -v    # Run tests
+
+# Run tests with coverage
+uv run pytest tests/ --cov=src --cov-report=html
+```
+
+## Docker Support (Experimental)
+
+**Note**: MLX requires Apple Silicon hardware. Docker support is experimental and primarily for development.
+
+```bash
+# Build and run with docker-compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
 
 ## Future Enhancements

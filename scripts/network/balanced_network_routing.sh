@@ -188,7 +188,11 @@ optimize_performance() {
 create_advanced_monitor() {
     echo -e "${YELLOW}Creating advanced traffic monitor...${RESET}"
     
-    cat > /Users/polyversai/hosted_dev/mlx_lm_servers/network_dashboard.py << 'EOF'
+    # Get script directory
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    
+    cat > "$PROJECT_DIR/network_dashboard.py" << 'EOF'
 #!/usr/bin/env python3
 import psutil
 import time
@@ -316,7 +320,7 @@ if __name__ == "__main__":
         print("\n\n✨ Dashboard closed.")
 EOF
     
-    chmod +x /Users/polyversai/hosted_dev/mlx_lm_servers/network_dashboard.py
+    chmod +x "$PROJECT_DIR/network_dashboard.py"
     echo -e "${GREEN}✓ Advanced monitor created${RESET}"
 }
 

@@ -11,8 +11,13 @@ os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
 os.environ['MLX_METAL_MEMORY_LIMIT'] = str(450 * 1024**3)
 os.environ['MLX_METAL_CACHE_LIMIT'] = str(50 * 1024**3)
 
-# Add mlx_vlm to path
-sys.path.insert(0, '/Users/polyversai/.lmstudio/mlx_lm/.venv/lib/python3.12/site-packages')
+# Add mlx_vlm to path - use environment variable or detect Python version
+mlx_venv_path = os.environ.get('MLX_VENV_PATH')
+if not mlx_venv_path:
+    # Try to auto-detect
+    python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    mlx_venv_path = os.path.expanduser(f'~/.lmstudio/mlx_lm/.venv/lib/{python_version}/site-packages')
+sys.path.insert(0, mlx_venv_path)
 
 import gc
 
@@ -62,7 +67,7 @@ def convert_with_aggressive_gc():
 
         convert(
             hf_path="meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            mlx_path="/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5",
+            mlx_path=os.path.expanduser("~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5"),
             quantize=True,
             q_group_size=32,
             q_bits=5,
@@ -79,7 +84,7 @@ def convert_with_aggressive_gc():
         cmd = [
             sys.executable, "-m", "mlx_vlm.convert",
             "--hf-path", "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            "--mlx-path", "/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5",
+            "--mlx-path", os.path.expanduser("~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5"),
             "--dtype", "float16",
             "-q", "--q-bits", "5", "--q-group-size", "32"
         ]

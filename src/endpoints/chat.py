@@ -15,6 +15,7 @@ from ..chuk_sessions import SessionManager
 from ..config import config
 from ..middleware import limiter
 from ..model_manager import model_manager
+from ..model_router import ModelRouter
 from ..models import ChatCompletionChunk, ChatCompletionRequest, ChatCompletionResponse, Choice, Message, Usage
 
 router = APIRouter()
@@ -51,6 +52,22 @@ async def create_chat_completion(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"max_tokens cannot exceed {config.max_tokens_limit}"
             )
+
+        # Extract service from API key
+        service = None
+        if auth.get("method") == "api_key":
+            api_key = auth.get("key", "")
+            service = ModelRouter.extract_service_from_api_key(api_key)
+
+        # Route to appropriate model
+        model_id = ModelRouter.get_model_for_request(
+            service=service,
+            user=request.user,
+            requested_model=request.model
+        )
+
+        # Update request with routed model
+        request.model = model_id
 
         # Get session manager
         sm = await get_session_manager()

@@ -67,8 +67,11 @@ async def verify_auth(credentials: HTTPAuthorizationCredentials = Security(secur
 
     token = credentials.credentials
 
-    # Check if it's an API key
-    if token.startswith("lbrx_"):
+    # Check if it's an API key (various prefixes)
+    api_key_prefixes = ["lbrx_", "vista_", "whisp_", "fork_", "data_", "voice_", "any_"]
+    is_api_key = any(token.startswith(prefix) for prefix in api_key_prefixes)
+
+    if is_api_key:
         if auth_manager.verify_api_key(token):
             return {"authenticated": True, "method": "api_key", "key": token}
         else:

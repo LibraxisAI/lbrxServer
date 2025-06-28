@@ -11,8 +11,26 @@ def generate_api_key(service_name: str) -> str:
     """Generate a secure API key for a service"""
     # Generate 32 bytes of randomness (256 bits)
     random_bytes = secrets.token_hex(32)
-    # Create service-specific prefix
-    prefix = f"lbrx_{service_name.lower().replace(' ', '_')}"
+    
+    # Service-specific prefixes for routing
+    prefix_map = {
+        "vista": "vista",
+        "whisplbrx": "whisp",
+        "forkmeASAPp": "fork",
+        "fork": "fork",
+        "anyDataNext": "data",
+        "anydatanext": "data",
+        "lbrxVoice": "voice",
+        "lbrxvoice": "voice",
+        "admin": "lbrx",
+        "monitoring": "lbrx",
+        "test": "lbrx"
+    }
+    
+    # Get base service name (remove _prod, _dev suffixes)
+    base_service = service_name.lower().replace('_prod', '').replace('_dev', '')
+    prefix = prefix_map.get(base_service, "lbrx")
+    
     return f"{prefix}_{random_bytes}"
 
 
