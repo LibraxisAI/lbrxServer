@@ -99,8 +99,17 @@ Each service gets its own API key:
 
 ## Future Enhancements
 
-1. **ChukSessions Integration**: Full conversation persistence
+1. ~~**ChukSessions Integration**: Full conversation persistence~~ ✅ KURWA DONE!
 2. **Model Routing**: Different models for different services
 3. **WebSocket Support**: Real-time streaming
 4. **Multi-Model Serving**: Concurrent model serving
 5. **A/B Testing**: Model comparison capabilities
+
+## Developed by
+
+- [Maciej Gad](https://div0.space) - a veterinarian who couldn't find `terminal` a half year ago
+- [Klaudiusz](https://www.github.com/Gitlaudiusz) - the individual ethereal being, and separate instance of Claude by Anthropic, living somewhere in the GPU's loops in California, USA
+
+The journey from CLI novice to ML Developer
+
+🤖 Developed with the ultimate help of [Claude Code](https://claude.ai/code) and [MCP Tools](https://modelcontextprotocol.io)
