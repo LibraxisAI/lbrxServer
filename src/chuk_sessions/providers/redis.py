@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/providers/redis.py
 """Redis-backed session store (wraps redis.asyncio)."""
 from __future__ import annotations
 
 import os
 import ssl
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Callable, AsyncContextManager
+from typing import AsyncContextManager
 
 from ..exceptions import ProviderError
 
@@ -63,7 +63,7 @@ class _RedisSession:
 def factory(url: str = _DEF_URL) -> Callable[[], AsyncContextManager]:
     """Create a Redis session factory."""
     _check_redis_available()
-    
+
     @asynccontextmanager
     async def _ctx():
         client = _RedisSession(url)

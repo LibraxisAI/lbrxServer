@@ -27,7 +27,7 @@ show_help() {
 
 start_server() {
     echo -e "${CYAN}Starting MLX LLM Server...${RESET}"
-    ./start_server.sh
+    ./scripts/start_server.sh
 }
 
 stop_server() {
@@ -75,8 +75,12 @@ check_status() {
     
     # Check if API is responding
     echo -e "\nAPI Health Check:"
-    if curl -k -s https://localhost/api/v1/health > /dev/null 2>&1; then
-        echo -e "API Status: ${GREEN}Healthy${RESET}"
+    # Check if running in dev mode (port 9123) or production (port 443)
+    if curl -s http://localhost:9123/api/v1/health > /dev/null 2>&1; then
+        echo -e "API Status: ${GREEN}Healthy${RESET} (Dev mode on port 9123)"
+        curl -s http://localhost:9123/api/v1/health | jq -r '.memory_usage'
+    elif curl -k -s https://localhost/api/v1/health > /dev/null 2>&1; then
+        echo -e "API Status: ${GREEN}Healthy${RESET} (Production mode on port 443)"
         curl -k -s https://localhost/api/v1/health | jq -r '.memory_usage'
     else
         echo -e "API Status: ${RED}Not Responding${RESET}"
@@ -104,12 +108,12 @@ show_logs() {
 
 run_tests() {
     echo -e "${CYAN}Running Test Suite${RESET}"
-    ./test_server.py
+    uv run scripts/testing/test_server.py
 }
 
 generate_keys() {
     echo -e "${CYAN}Generating API Keys${RESET}"
-    python3 generate_api_keys.py
+    uv run scripts/testing/generate_api_keys.py
 }
 
 list_models() {
@@ -117,14 +121,17 @@ list_models() {
     echo "==============="
     
     # Use the API if server is running
-    if curl -k -s https://localhost/api/v1/models > /dev/null 2>&1; then
+    if curl -s http://localhost:9123/api/v1/models > /dev/null 2>&1; then
+        curl -s http://localhost:9123/api/v1/models | jq -r '.data[] | "\(.id)"'
+    elif curl -k -s https://localhost/api/v1/models > /dev/null 2>&1; then
         curl -k -s https://localhost/api/v1/models | jq -r '.data[] | "\(.id)"'
     else
-        # List from filesystem
-        echo -e "${YELLOW}Server not running, listing from filesystem:${RESET}"
-        find /Users/polyversai/.lmstudio/models -maxdepth 2 -name "config.json" | \
-            sed 's|/Users/polyversai/.lmstudio/models/||' | \
-            sed 's|/config.json||'
+        # List configured models
+        echo -e "${YELLOW}Server not running, showing configured models:${RESET}"
+        echo "- LibraxisAI/Qwen3-14b-MLX-Q5 (default)"
+        echo "- mlx-community/Llama-3.2-3B-Instruct-4bit"
+        echo "- mlx-community/Mistral-7B-Instruct-v0.3-4bit"
+        echo "- mlx-community/Phi-3.5-mini-instruct-4bit"
     fi
 }
 
@@ -132,7 +139,9 @@ show_memory() {
     echo -e "${CYAN}Memory Usage${RESET}"
     echo "============"
     
-    if curl -k -s https://localhost/api/v1/models/memory/usage > /dev/null 2>&1; then
+    if curl -s http://localhost:9123/api/v1/models/memory/usage > /dev/null 2>&1; then
+        curl -s http://localhost:9123/api/v1/models/memory/usage | jq
+    elif curl -k -s https://localhost/api/v1/models/memory/usage > /dev/null 2>&1; then
         curl -k -s https://localhost/api/v1/models/memory/usage | jq
     else
         echo -e "${RED}Server not running${RESET}"
@@ -149,48 +158,52 @@ install_deps() {
 }
 
 install_systemd() {
-    echo -e "${CYAN}Installing systemd service${RESET}"
+    echo -e "${CYAN}Installing service${RESET}"
+    
+    # Get current directory and user
+    CURRENT_DIR=$(pwd)
+    CURRENT_USER=$(whoami)
+    UV_PATH=$(which uv)
     
     # For macOS, we use launchd instead
-    cat > ~/Library/LaunchAgents/ai.libraxis.mlx-llm-server.plist << EOF
+    cat > ~/Library/LaunchAgents/com.mlx-llm-server.plist << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>ai.libraxis.mlx-llm-server</string>
+    <string>com.mlx-llm-server</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/polyversai/.local/bin/uv</string>
+        <string>$UV_PATH</string>
         <string>run</string>
-        <string>python</string>
         <string>-m</string>
         <string>src.main</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/polyversai/hosted_dev/mlx_lm_servers</string>
+    <string>$CURRENT_DIR</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/polyversai/hosted_dev/mlx_lm_servers/logs/server.log</string>
+    <string>$CURRENT_DIR/logs/server.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/polyversai/hosted_dev/mlx_lm_servers/logs/error.log</string>
+    <string>$CURRENT_DIR/logs/error.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/polyversai/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <string>$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
-        <string>/Users/polyversai</string>
+        <string>$HOME</string>
     </dict>
 </dict>
 </plist>
 EOF
     
-    launchctl load ~/Library/LaunchAgents/ai.libraxis.mlx-llm-server.plist
+    launchctl load ~/Library/LaunchAgents/com.mlx-llm-server.plist
     echo -e "${GREEN}Service installed and started${RESET}"
-    echo -e "${YELLOW}To manage: launchctl [start|stop] ai.libraxis.mlx-llm-server${RESET}"
+    echo -e "${YELLOW}To manage: launchctl [start|stop] com.mlx-llm-server${RESET}"
 }
 
 # Main command handling

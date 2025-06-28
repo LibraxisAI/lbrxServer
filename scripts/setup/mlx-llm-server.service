@@ -9,7 +9,7 @@ Group=staff
 WorkingDirectory=/Users/polyversai/hosted_dev/mlx_lm_servers
 Environment="PATH=/Users/polyversai/.local/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="HOME=/Users/polyversai"
-ExecStart=/Users/polyversai/.local/bin/uv run python -m src.main
+ExecStart=/Users/polyversai/.local/bin/uv run -m src.main
 Restart=always
 RestartSec=10
 

@@ -21,6 +21,8 @@ dependencies = [
     "sentencepiece>=0.2.0",
     "protobuf>=5.29.0",
     "numpy<2.0.0",
+    "ruff>=0.12.1",
+    "pydantic-settings>=2.10.1",
 ]
 
 [project.optional-dependencies]
@@ -40,6 +42,15 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501", "B008", "RUF012"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.11"

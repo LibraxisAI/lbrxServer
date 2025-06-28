@@ -70,13 +70,13 @@ cp .env.example .env
 
 ```bash
 # Start development server (no SSL)
-./start_server.sh dev
+./scripts/start_server.sh dev
 
 # Or start production server with SSL
-./start_server.sh
+./scripts/start_server.sh
 
 # Test the server
-curl http://localhost:8000/api/v1/health
+curl http://localhost:9123/api/v1/health
 ```
 
 ## Configuration
@@ -85,9 +85,9 @@ Edit `.env` file with your settings:
 
 ```bash
 # Basic Configuration
-DEFAULT_MODEL=mlx-community/Llama-3.2-3B-Instruct-4bit  # Start with a small model
-API_KEYS=["your-api-key-here"]  # Generate with: ./generate_api_keys.py
-MAX_MODEL_MEMORY_GB=24  # Adjust based on your system
+DEFAULT_MODEL=LibraxisAI/Qwen3-14b-MLX-Q5  # Premium 14B model with excellent reasoning
+API_KEYS=["your-api-key-here"]  # Generate with: python scripts/testing/generate_api_keys.py
+MAX_MODEL_MEMORY_GB=32  # Adjust based on your system (min 16GB for Qwen3)
 
 # Optional: SSL Configuration (for production)
 SSL_CERT=/path/to/cert.pem
@@ -102,7 +102,7 @@ REDIS_URL=redis://localhost:6379/0
 ### Basic Chat Completion
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/chat/completions \
+curl -X POST http://localhost:9123/api/v1/chat/completions \
   -H "Authorization: Bearer your-api-key-here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -117,13 +117,13 @@ curl -X POST http://localhost:8000/api/v1/chat/completions \
 
 ```bash
 # Create a session
-SESSION_ID=$(curl -X POST http://localhost:8000/api/v1/sessions \
+SESSION_ID=$(curl -X POST http://localhost:9123/api/v1/sessions \
   -H "Authorization: Bearer your-api-key-here" \
   -H "Content-Type: application/json" \
   -d '{"data": {"user": "test-user"}}' | jq -r '.session_id')
 
 # Use the session
-curl -X POST http://localhost:8000/api/v1/chat/completions \
+curl -X POST http://localhost:9123/api/v1/chat/completions \
   -H "Authorization: Bearer your-api-key-here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -158,9 +158,41 @@ Each service gets its own API key:
 - Prometheus metrics at `http://localhost:9090/metrics`
 - Health endpoint at `https://libraxis.cloud/api/v1/health`
 
+## Project Structure
+
+```
+mlx-llm-server/
+├── src/                    # Main application code
+│   ├── endpoints/         # API endpoints
+│   ├── chuk_sessions/     # Session management
+│   └── *.py              # Core modules
+├── scripts/               # Utility scripts
+│   ├── conversion/        # Model conversion tools
+│   ├── network/          # Network configuration
+│   ├── setup/            # Installation helpers
+│   └── testing/          # Test utilities
+├── docs/                  # Documentation
+│   ├── API.md            # API reference
+│   ├── ARCHITECTURE.md   # System design
+│   └── DEPLOYMENT.md     # Deployment guide
+└── test.sh               # Quick test runner
+```
+
+## Development
+
+```bash
+# Run all checks
+./test.sh
+
+# Run specific checks
+uv run ruff check .        # Linting
+uv run ruff format .       # Format code
+uv run pytest             # Run tests (when available)
+```
+
 ## Future Enhancements
 
-1. ~~**ChukSessions Integration**: Full conversation persistence~~ ✅ KURWA DONE!
+1. ~~**ChukSessions Integration**: Full conversation persistence~~ ✅ DONE!
 2. **Model Routing**: Different models for different services
 3. **WebSocket Support**: Real-time streaming
 4. **Multi-Model Serving**: Concurrent model serving

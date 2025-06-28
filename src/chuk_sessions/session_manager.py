@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/session_manager.py
 """
 Pure session manager.
@@ -12,15 +11,16 @@ Simple rules:
 
 from __future__ import annotations
 
-import os
-import uuid
-import time
-import json
 import asyncio
+import json
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any, AsyncContextManager, Callable
-from dataclasses import dataclass, asdict, field
+import os
+import time
+import uuid
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
+from typing import Any, AsyncContextManager
 
 from .exceptions import SessionError
 
@@ -38,16 +38,16 @@ class SessionMetadata:
     """Pure session metadata for grid operations."""
     session_id: str
     sandbox_id: str
-    user_id: Optional[str] = None
+    user_id: str | None = None
     created_at: str | None = None
     expires_at: str | None = None
     status: str = "active"
-    last_accessed: Optional[str] = None
+    last_accessed: str | None = None
     # Extension-point for applications to add custom data
-    custom_metadata: Dict[str, Any] = field(default_factory=dict)
+    custom_metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        now_iso = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         if self.created_at is None:
             self.created_at = now_iso
         if self.last_accessed is None:
@@ -61,20 +61,20 @@ class SessionMetadata:
         if not self.expires_at:
             return False
         expires = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
-        return datetime.now(timezone.utc) > expires
+        return datetime.now(UTC) > expires
 
     def touch(self) -> None:
         """Refresh the last-accessed timestamp to ‘now’."""
-        self.last_accessed = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        self.last_accessed = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     # --------------------------------------------------------------------- #
     # Serialisation helpers
     # --------------------------------------------------------------------- #
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SessionMetadata":
+    def from_dict(cls, data: dict[str, Any]) -> SessionMetadata:
         return cls(**data)
 
 
@@ -92,7 +92,7 @@ class SessionManager:
     def __init__(
         self,
         sandbox_id: str | None = None,
-        session_factory: Optional[Callable[[], AsyncContextManager]] = None,
+        session_factory: Callable[[], AsyncContextManager] | None = None,
         default_ttl_hours: int = _DEFAULT_SESSION_TTL_HOURS,
     ) -> None:
         # 1️⃣  Determine a stable sandbox namespace
@@ -116,7 +116,7 @@ class SessionManager:
             self.session_factory = factory_for_env()
 
         # local LRU-ish cache
-        self._session_cache: Dict[str, SessionMetadata] = {}
+        self._session_cache: dict[str, SessionMetadata] = {}
         self._cache_lock = asyncio.Lock()
 
         logger.info("SessionManager initialised for sandbox: %s", self.sandbox_id)
@@ -127,10 +127,10 @@ class SessionManager:
 
     async def allocate_session(
         self,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        ttl_hours: Optional[int] = None,
-        custom_metadata: Optional[Dict[str, Any]] = None,
+        session_id: str | None = None,
+        user_id: str | None = None,
+        ttl_hours: int | None = None,
+        custom_metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Allocate a new session, or validate & refresh an existing one.
@@ -150,7 +150,7 @@ class SessionManager:
             session_id = self._generate_session_id(user_id)
 
         expires_at = (
-            (datetime.now(timezone.utc) + timedelta(hours=ttl_hours))
+            (datetime.now(UTC) + timedelta(hours=ttl_hours))
             .isoformat()
             .replace("+00:00", "Z")
         )
@@ -183,14 +183,14 @@ class SessionManager:
             logger.warning("Session validation failed for %s: %s", session_id, err)
             return False
 
-    async def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_info(self, session_id: str) -> dict[str, Any] | None:
         metadata = await self._get_session_metadata(session_id)
         return metadata.to_dict() if metadata else None
 
     async def update_session_metadata(
         self,
         session_id: str,
-        custom_metadata: Dict[str, Any],
+        custom_metadata: dict[str, Any],
         merge: bool = True,
     ) -> bool:
         """Merge or overwrite the custom-metadata blob."""
@@ -259,7 +259,7 @@ class SessionManager:
     # Internal helpers
     # ──────────────────────────────────────────────────────────────────────
 
-    def _generate_session_id(self, user_id: Optional[str] = None) -> str:
+    def _generate_session_id(self, user_id: str | None = None) -> str:
         timestamp = int(time.time())
         rnd = uuid.uuid4().hex[:8]
         if user_id:
@@ -267,7 +267,7 @@ class SessionManager:
             return f"sess-{safe_user}-{timestamp}-{rnd}"
         return f"sess-{timestamp}-{rnd}"
 
-    async def _get_session_metadata(self, session_id: str) -> Optional[SessionMetadata]:
+    async def _get_session_metadata(self, session_id: str) -> SessionMetadata | None:
         # Try the in-process cache first
         async with self._cache_lock:
             cached = self._session_cache.get(session_id)
@@ -303,7 +303,7 @@ class SessionManager:
             async with session_ctx_mgr as session:
                 key = f"session:{metadata.session_id}"
                 expires = datetime.fromisoformat(metadata.expires_at.replace("Z", "+00:00"))
-                ttl = int((expires - datetime.now(timezone.utc)).total_seconds())
+                ttl = int((expires - datetime.now(UTC)).total_seconds())
                 if ttl <= 0:  # already expired – don’t store
                     logger.warning("Refusing to store expired session %s", metadata.session_id)
                     return
@@ -330,7 +330,7 @@ class SessionManager:
             logger.info("Cleaned %d expired sessions from cache", removed)
         return removed
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         return {
             "cached_sessions": len(self._session_cache),
             "sandbox_id": self.sandbox_id,
