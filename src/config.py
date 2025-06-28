@@ -80,7 +80,7 @@ class ServerConfig(BaseSettings):
     # Utility helpers
 
     @property
-    def is_dev(self) -> bool:  # noqa: D401
+    def is_dev(self) -> bool:
         """Return True if running in development environment."""
         return self.environment.lower() in {"dev", "development", "local"}
 
@@ -94,7 +94,7 @@ class ServerConfig(BaseSettings):
         if not self.allowed_origins:
             return ["*"] if self.is_dev else []
 
-        # Provided list – support JSON list or comma separated string
+        # Provided list - support JSON list or comma separated string
         raw = self.allowed_origins.strip()
         if raw.startswith("["):
             import json
