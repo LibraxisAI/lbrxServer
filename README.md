@@ -113,3 +113,9 @@ Each service gets its own API key:
 The journey from CLI novice to ML Developer
 
 🤖 Developed with the ultimate help of [Claude Code](https://claude.ai/code) and [MCP Tools](https://modelcontextprotocol.io)
+
+## Special Thanks
+
+- [chrishayuk](https://github.com/chrishayuk) - for MLX tutorials and examples
+- MLX Community - for continuous support and knowledge sharing
+- Apple ML Team - for creating the amazing MLX framework

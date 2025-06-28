@@ -116,6 +116,7 @@ Claude: *integrates entire ChukSessions*
 - **Apple** - for MLX and amazing hardware
 - **Anthropic** - for Claude who lives in the GPU
 - **MLX Community** - for patience with our questions
+- **chrishayuk** - for excellent MLX tutorials and examples that helped us understand the framework
 - **LM Studio** - for inspiration (and for not supporting DeciLM 😈)
 
 ## Our Motto
