@@ -73,6 +73,7 @@ def setup_middleware(app):
         "localhost",
         "127.0.0.1",
         "178.183.101.202",  # Dragon static IP
+        "testserver",  # pytest/starlette default host
     ]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
 

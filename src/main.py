@@ -86,7 +86,11 @@ async def health():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "memory_usage": model_manager.memory_usage,
+        "memory_usage": (
+            model_manager.memory_usage
+            if isinstance(model_manager.memory_usage, dict)
+            else {"used_gb": model_manager.memory_usage}
+        ),
         "loaded_models": list(model_manager.models.keys())
     }
 
