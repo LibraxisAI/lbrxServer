@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    # uv.lock is compatible
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Group all python updates into a single PR to reduce noise
+    groups:
+      python-deps:
+        patterns: ["*"]
