@@ -17,7 +17,7 @@ jobs:
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies with uv
-        run: uv pip install -r requirements.txt
+        run: uv sync
 
       - name: Build Docker image
         run: docker build -t mlx-llm-server:ci .
