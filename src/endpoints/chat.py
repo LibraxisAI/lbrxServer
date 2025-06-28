@@ -1,21 +1,22 @@
 """
 Chat completion endpoints with ChukSessions integration
 """
-import uuid
-import time
 import asyncio
-from typing import AsyncGenerator
+import json
+import time
+import uuid
+from collections.abc import AsyncGenerator
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-import json
 
-from ..models import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionChunk, Choice, Message, Usage
-from ..model_manager import model_manager
 from ..auth import verify_auth
+from ..chuk_sessions import SessionManager
 from ..config import config
 from ..middleware import limiter
-from ..chuk_sessions import SessionManager
-
+from ..model_manager import model_manager
+from ..model_router import ModelRouter
+from ..models import ChatCompletionChunk, ChatCompletionRequest, ChatCompletionResponse, Choice, Message, Usage
 
 router = APIRouter()
 
@@ -51,10 +52,26 @@ async def create_chat_completion(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"max_tokens cannot exceed {config.max_tokens_limit}"
             )
-        
+
+        # Extract service from API key
+        service = None
+        if auth.get("method") == "api_key":
+            api_key = auth.get("key", "")
+            service = ModelRouter.extract_service_from_api_key(api_key)
+
+        # Route to appropriate model
+        model_id = ModelRouter.get_model_for_request(
+            service=service,
+            user=request.user,
+            requested_model=request.model
+        )
+
+        # Update request with routed model
+        request.model = model_id
+
         # Get session manager
         sm = await get_session_manager()
-        
+
         # Handle session if provided
         if request.session_id:
             # Try to get existing session
@@ -86,7 +103,7 @@ async def create_chat_completion(
         else:
             # No session management, just convert messages
             messages = [msg.dict() for msg in request.messages]
-        
+
         # Generate completion
         if request.stream:
             return StreamingResponse(
@@ -104,7 +121,7 @@ async def create_chat_completion(
                 stop=request.stop,
                 stream=False
             )
-            
+
             # Save assistant response to session if using sessions
             if request.session_id:
                 await sm.add_message(
@@ -112,11 +129,11 @@ async def create_chat_completion(
                     role="assistant",
                     content=output
                 )
-            
+
             # Count tokens (approximate)
             prompt_tokens = sum(len(msg["content"].split()) * 1.3 for msg in messages)
             completion_tokens = len(output.split()) * 1.3
-            
+
             response = ChatCompletionResponse(
                 id=f"chatcmpl-{uuid.uuid4()}",
                 object="chat.completion",
@@ -136,9 +153,9 @@ async def create_chat_completion(
                     total_tokens=int(prompt_tokens + completion_tokens)
                 )
             )
-            
+
             return response
-            
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -154,7 +171,7 @@ async def stream_chat_completion(
     try:
         completion_id = f"chatcmpl-{uuid.uuid4()}"
         created = int(time.time())
-        
+
         # Initial chunk
         chunk = ChatCompletionChunk(
             id=completion_id,
@@ -165,7 +182,7 @@ async def stream_chat_completion(
             choices=[{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]
         )
         yield f"data: {chunk.json()}\n\n"
-        
+
         # Generate content
         async for token in model_manager.generate_completion(
             model_id=request.model,
@@ -186,7 +203,7 @@ async def stream_chat_completion(
             )
             yield f"data: {chunk.json()}\n\n"
             await asyncio.sleep(0)  # Allow other tasks to run
-        
+
         # Final chunk
         chunk = ChatCompletionChunk(
             id=completion_id,
@@ -198,7 +215,7 @@ async def stream_chat_completion(
         )
         yield f"data: {chunk.json()}\n\n"
         yield "data: [DONE]\n\n"
-        
+
     except Exception as e:
         error_chunk = {
             "error": {

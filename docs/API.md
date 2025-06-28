@@ -107,6 +107,39 @@ data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1719565
 data: [DONE]
 ```
 
+### Model Routing
+
+The server automatically routes requests to appropriate models based on the service identified by your API key:
+
+**Service-specific routing:**
+- `vista_*` API keys → `qwen3-14b` (medical reasoning)
+- `fork_*` API keys → `deepseek-coder` (code generation)
+- `data_*` API keys → `qwen3-14b` (data analysis)
+- `voice_*` API keys → `phi-3` (fast responses for voice)
+- `whisp_*` API keys → `whisper-large-v3` (transcription)
+
+**Example with VISTA API key:**
+```bash
+curl -X POST http://localhost:9123/api/v1/chat/completions \
+  -H "Authorization: Bearer vista_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Diagnose symptoms: fever, cough, fatigue"}]
+  }'
+# Automatically uses qwen3-14b model
+```
+
+**Override with explicit model:**
+```bash
+curl -X POST http://localhost:9123/api/v1/chat/completions \
+  -H "Authorization: Bearer vista_xxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "mistral-7b",  # Overrides default routing
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
 ### Completions
 
 Create a text completion (legacy format).

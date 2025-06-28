@@ -5,7 +5,9 @@ echo "🔧 Resuming Maverick-17B conversion..."
 
 # Check what we have
 echo "Current conversion status:"
-CONVERTED=$(ls /Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5/model-*.safetensors 2>/dev/null | wc -l)
+# Use environment variable or default path
+MODELS_DIR=${LMSTUDIO_MODELS_DIR:-~/.lmstudio/models}
+CONVERTED=$(ls "$MODELS_DIR"/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5/model-*.safetensors 2>/dev/null | wc -l)
 echo "Converted: $CONVERTED/72 files"
 
 # Option 1: Try to complete with mlx_lm (recommended)
@@ -15,7 +17,7 @@ cat << 'EOF'
 cd ~/.lmstudio/mlx_lm
 uv run mlx_lm.convert \
   --hf-path meta-llama/Llama-4-Maverick-17B-128E-Instruct \
-  --mlx-path /Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q4 \
+  --mlx-path ~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q4 \
   --dtype float16 -q --q-bits 4 --q-group-size 64
 EOF
 
@@ -33,7 +35,7 @@ echo "https://huggingface.co/models?search=Maverick%20MLX"
 # Clean up advice
 echo ""
 echo "To free space, you can remove the failed conversion:"
-echo "rm -rf /Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5"
+echo "rm -rf ~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5"
 echo ""
 echo "And the huge HF cache after successful conversion:"
 echo "rm -rf ~/.cache/huggingface/hub/models--meta-llama--Llama-4-Maverick-17B-128E-Instruct"

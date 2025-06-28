@@ -15,13 +15,13 @@ uv init
 uv sync
 
 # Start development server
-./start_server.sh dev
+./scripts/start_server.sh dev
 
 # Start production server (daemonized)
-./start_server.sh
+./scripts/start_server.sh
 
 # Check server status
-./manage.sh status
+./scripts/manage.sh status
 ```
 
 ### Model Operations

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/exceptions.py
 """
 Exception classes for sessions.

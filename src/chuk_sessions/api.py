@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/api.py
 """
 Convenient API for CHUK Sessions.
 """
 
 from __future__ import annotations
+
 from typing import AsyncContextManager
 
 from .provider_factory import factory_for_env

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/__init__.py
 """
 CHUK Sessions - Advanced async session management with grid architecture.
@@ -13,33 +12,33 @@ from __future__ import annotations
 __version__ = "2.0.0"
 
 # Core imports
-from .session_manager import SessionManager
+from .api import get_session, session
 from .exceptions import ProviderError, SessionError
 from .provider_factory import factory_for_env
-from .api import get_session, session
 
 # Convenience imports for providers
 from .providers import memory, redis
+from .session_manager import SessionManager
 
 __all__ = [
     # Simple API
     "get_session",
     "session",
-    
+
     # High-level API
     "SessionManager",
-    
+
     # Factory
     "factory_for_env",
-    
+
     # Exceptions
     "ProviderError",
     "SessionError",
-    
+
     # Providers
     "memory",
     "redis",
-    
+
     # Version
     "__version__",
 ]

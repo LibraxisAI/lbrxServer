@@ -11,36 +11,43 @@ os.environ['PYTORCH_MPS_HIGH_WATERMARK_RATIO'] = '0.0'
 os.environ['MLX_METAL_MEMORY_LIMIT'] = str(450 * 1024**3)
 os.environ['MLX_METAL_CACHE_LIMIT'] = str(50 * 1024**3)
 
-# Add mlx_vlm to path
-sys.path.insert(0, '/Users/polyversai/.lmstudio/mlx_lm/.venv/lib/python3.12/site-packages')
+# Add mlx_vlm to path - use environment variable or detect Python version
+mlx_venv_path = os.environ.get('MLX_VENV_PATH')
+if not mlx_venv_path:
+    # Try to auto-detect
+    python_version = f"python{sys.version_info.major}.{sys.version_info.minor}"
+    mlx_venv_path = os.path.expanduser(f'~/.lmstudio/mlx_lm/.venv/lib/{python_version}/site-packages')
+sys.path.insert(0, mlx_venv_path)
+
+import gc
 
 import mlx.core as mx
 import mlx.nn as nn
-import gc
+
 
 def convert_with_aggressive_gc():
     """Convert VLM with aggressive garbage collection"""
-    
+
     print("🔧 Patched VLM converter starting...")
-    
+
     # Monkey patch the quantization to run in smaller chunks
     original_quantize = nn.quantize
-    
+
     def chunked_quantize(model, config, q_group_size=32, q_bits=5):
         """Quantize model layer by layer to avoid GPU timeout"""
         print("Using chunked quantization...")
-        
+
         # Process vision model separately
         if hasattr(model, 'vision_model'):
             print("Quantizing vision model...")
             model.vision_model = original_quantize(
-                model.vision_model, 
-                group_size=q_group_size, 
+                model.vision_model,
+                group_size=q_group_size,
                 bits=q_bits
             )
             gc.collect()
             mx.metal.clear_cache()
-        
+
         # Process language model layers one by one
         if hasattr(model, 'language_model'):
             print("Quantizing language model layers...")
@@ -49,39 +56,39 @@ def convert_with_aggressive_gc():
                 layer = original_quantize(layer, group_size=q_group_size, bits=q_bits)
                 gc.collect()
                 mx.metal.clear_cache()
-        
+
         return model
-    
+
     nn.quantize = chunked_quantize
-    
+
     try:
         # Run the actual conversion
         from mlx_vlm.convert import convert
-        
+
         convert(
             hf_path="meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            mlx_path="/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5",
+            mlx_path=os.path.expanduser("~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5"),
             quantize=True,
             q_group_size=32,
             q_bits=5,
             dtype="float16",
             low_memory=True  # If this option exists
         )
-        
+
     except Exception as e:
         print(f"Error: {e}")
         print("\nTrying alternative approach...")
-        
+
         # Alternative: Use subprocess with timeout handling
         import subprocess
         cmd = [
             sys.executable, "-m", "mlx_vlm.convert",
             "--hf-path", "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-            "--mlx-path", "/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5",
+            "--mlx-path", os.path.expanduser("~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-VLM-MLX-Q5"),
             "--dtype", "float16",
             "-q", "--q-bits", "5", "--q-group-size", "32"
         ]
-        
+
         # Run with increased ulimits
         subprocess.run(["ulimit", "-n", "65536"])  # Increase file descriptors
         subprocess.run(cmd)

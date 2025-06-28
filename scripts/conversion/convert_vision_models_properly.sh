@@ -72,7 +72,7 @@ cat << 'EOF'
 python3 << 'PYTHON'
 import os
 import sys
-sys.path.append('/Users/polyversai/.lmstudio/mlx_lm')
+sys.path.append(os.path.expanduser('~/.lmstudio/mlx_lm'))
 
 # Import AFTER setting memory limits
 os.environ['MLX_METAL_MEMORY_LIMIT'] = '450000000000'
@@ -85,7 +85,7 @@ from pathlib import Path
 try:
     convert(
         hf_path="meta-llama/Llama-4-Maverick-17B-128E-Instruct",
-        mlx_path=Path("/Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5"),
+        mlx_path=Path(os.path.expanduser("~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5")),
         quantize=True,
         q_bits=5,
         q_group_size=32,
@@ -108,7 +108,7 @@ echo -e "${GREEN}export METAL_DEVICE_WRAPPER_TYPE=1${RESET}"
 echo -e "${GREEN}export MLX_METAL_MEMORY_LIMIT=450000000000${RESET}"
 echo -e "${GREEN}uv run mlx_lm.convert \\
   --hf-path meta-llama/Llama-4-Maverick-17B-128E-Instruct \\
-  --mlx-path /Users/polyversai/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5 \\
+  --mlx-path ~/.lmstudio/models/LibraxisAI/Llama-4-Maverick-17B-128E-Instruct-MLX-Q5 \\
   --dtype float16 -q --q-bits 5 --q-group-size 32${RESET}"
 
 echo -e "\n💡 Pro tips:"

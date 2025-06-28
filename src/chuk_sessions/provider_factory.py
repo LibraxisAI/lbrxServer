@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # chuk_sessions/provider_factory.py
 """
 Resolve the session storage back-end requested via **SESSION_PROVIDER**.
@@ -12,8 +11,9 @@ Built-in providers
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from importlib import import_module
-from typing import Callable, AsyncContextManager
+from typing import AsyncContextManager
 
 __all__ = ["factory_for_env"]
 
@@ -38,7 +38,7 @@ def factory_for_env() -> Callable[[], AsyncContextManager]:
         raise AttributeError(
             f"Session provider '{provider}' lacks a factory() function"
         )
-    
+
     # For dynamic providers, call factory() to get the actual factory function
     factory_func = mod.factory
     if callable(factory_func):

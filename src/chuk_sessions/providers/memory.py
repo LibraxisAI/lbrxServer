@@ -4,18 +4,19 @@
 """Simple in-process dict with TTL support (coarse but useful for tests)."""
 from __future__ import annotations
 
+import asyncio
 import os
 import time
-import asyncio
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Dict, Tuple, Any, Callable, AsyncContextManager
+from typing import Any, AsyncContextManager
 
 # Default TTL from environment or 1 hour
 _DEFAULT_TTL = int(os.getenv("SESSION_DEFAULT_TTL", "3600"))
 
 
 class _MemorySession:
-    _cache: Dict[str, Tuple[Any, float]] = {}
+    _cache: dict[str, tuple[Any, float]] = {}
     _LOCK = asyncio.Lock()
 
     async def set(self, key: str, value: str):

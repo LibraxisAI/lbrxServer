@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  mlx-llm-server:
+    build: .
+    container_name: mlx-llm-server
+    ports:
+      - "9123:9123"  # API port
+      - "9090:9090"  # Metrics port
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=9123
+      - ENABLE_AUTH=false  # Set to true in production
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./.env:/app/.env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    # Note: MLX requires Apple Silicon hardware
+    # This won't work properly on non-Apple hardware
+    platform: linux/arm64
+
+  redis:
+    image: redis:7-alpine
+    container_name: mlx-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:

@@ -1,0 +1,69 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Models (too large for Docker image)
+models/
+*.safetensors
+*.gguf
+*.mlx
+
+# Documentation
+docs/
+*.md
+LICENSE
+CONTRIBUTING.md
+
+# Cache
+.cache/
+.ruff_cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# CI/CD
+.github/
+
+# Scripts not needed in container
+scripts/network/
+scripts/conversion/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak

@@ -3,16 +3,16 @@ Main FastAPI application for MLX LLM Server
 """
 import logging
 from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from prometheus_client import start_http_server
 
 from .config import config
-from .model_manager import model_manager
-from .middleware import setup_middleware
 from .endpoints import chat, completions, models, sessions
-
+from .middleware import setup_middleware
+from .model_manager import model_manager
 
 # Configure logging
 logging.basicConfig(
@@ -27,18 +27,18 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("Starting MLX LLM Server...")
-    
+
     # Initialize model manager
     await model_manager.initialize()
     logger.info(f"Default model loaded: {config.default_model}")
-    
+
     # Start metrics server
     if config.enable_metrics:
         start_http_server(config.metrics_port)
         logger.info(f"Metrics server started on port {config.metrics_port}")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down MLX LLM Server...")
 
@@ -112,7 +112,7 @@ def run_server():
     logger.info(f"Starting server on https://{config.host}:{config.port}")
     logger.info(f"API available at https://{config.primary_domain}{config.api_prefix}")
     logger.info(f"Also available at https://{config.tailscale_domain}{config.api_prefix}")
-    
+
     uvicorn.run(
         "src.main:app",
         host=config.host,
