@@ -45,7 +45,7 @@ uv run mlx_lm.convert --hf-path "mistralai/Mistral-7B-Instruct-v0.3" \
 # Run test suite
 ./test_server.py
 
-# Health check
+# Health check (inside the tailscale VLAN)
 curl -k https://dragon.fold-antares.ts.net/api/v1/health
 
 # Test API endpoint
@@ -60,8 +60,8 @@ curl -X POST https://libraxis.cloud/api/v1/chat/completions \
 ### Core Components
 
 - **FastAPI Server** (`src/main.py`): Async web server with lifespan management
-  - SSL/TLS support via Tailscale certificates
-  - Multi-domain hosting (libraxis.cloud, dragon.fold-antares.ts.net)
+  - SSL/TLS support via CloudFlare and Tailscale certificates
+  - Multi-domain hosting (global , e.g https://libraxis.cloud, tailscaled: https://dragon.fold-antares.ts.net)
   - OpenAI-compatible endpoints
 
 - **Model Manager** (`src/model_manager.py`): Dynamic model lifecycle management
@@ -87,26 +87,30 @@ curl -X POST https://libraxis.cloud/api/v1/chat/completions \
    - Command-R, Gemma architectures
 
 2. **Vision-Language Models** (via mlx_vlm)
-   - Requires separate mlx_vlm.server on port 8081
-   - Llama-Scout, Pixtral, Qwen-VL support
+   - Requires separate mlx_vlm.server on port 8081 
+   - various vision model compatibility (Llama-Scout, Gemma3, Pixtral, Qwen2.5-VL)
    - Auto-launched when VLM models configured
 
 3. **Specialized Models**
    - Rerankers for search optimization
    - Embedding models for RAG pipelines
-   - Audio models (Whisper) - future support
+   - Audio STT models (mlx-whisper, pyaudio whisperX with native pyannote support) via lbrxVoice pipeline
+   - Audio TTS models (coqui xtts, Microsoft edge-tts, dia1.6b, llama-outetts, meta wav2vec_pl)
+   - openai/whisper and sesame/csm-1b finetuning for conversational AI finetuning - IN PROGRESS
 
 ### Infrastructure Split
 
-**Dragon (M3 Ultra, 512GB RAM)**
+**Mac Studio M3 Ultra, 512GB RAM**
 - Primary LLM inference server
 - Hosts all language and vision models
 - SSL endpoints: libraxis.cloud, dragon.fold-antares.ts.net
 
-**Studio (M2 Ultra, 128GB RAM)**
+**Mac Studio M2 Ultra, 128GB RAM**
 - Voice processing workloads
 - Whisper transcription services
 - Audio synthesis pipelines
+
+**designed for horizontal scaling with next workstations added**
 
 ## Key Implementation Details
 
@@ -118,17 +122,17 @@ curl -X POST https://libraxis.cloud/api/v1/chat/completions \
 
 # Model memory estimates (from model_config.py):
 - Nemotron 253B Q5: 160GB
-- Command-A 03 Q8: 52GB
-- Qwen3 14B Q8: 15GB
-- Llama Scout VLM: 13GB
+- Command-A 03-2025 Q5: 76GB
+- Qwen3 14B Q5: 9.7GB
+- Llama4-Scout-Q6 with Vision: 112GB
 ```
 
 ### Model Aliases System
 ```python
 # User-friendly aliases map to full model paths
-"nemotron-ultra" → "/path/to/Nemotron-Ultra-253B-v1-mlx-q5"
-"command-a" → "mlx-community/command-a-03-2025-q8"
-"qwen3-14b" → "mlx-community/qwen-3-14b-lbrx-2.0-q8"
+"nemotron-ultra" → "LibraxisAI/Nemotron-Ultra-253B-v1-mlx-q5"
+"command-a" → "LibraxisAI/command-a-03-2025-q5"
+"qwen3-14b" → "LibraxisAI/qwen-3-14b-MLX-Q5"
 ```
 
 ### VLM Integration
@@ -170,7 +174,7 @@ Vision models require special handling:
 
 ## Service Integration
 
-Each service has dedicated API key:
+Initially planned for internal use only. Current projects using the servers:
 - **VISTA**: Primary veterinary PIMS
 - **whisplbrx**: Whisper transcription
 - **forkmeASAPp**: Code generation
@@ -182,8 +186,8 @@ Each service has dedicated API key:
 ### MLX Advantages on Apple Silicon
 - Unified memory architecture (no GPU transfers)
 - Hardware acceleration via Metal/ANE
-- 4-bit/8-bit quantization with minimal quality loss
-- ~250 tokens/s on M3 Max for 1B models
+- 5-bit quantization with minimal quality loss
+- ~86.3 tokens/s on M3 Ultra for 8B models
 
 ### Model Conversion Best Practices
 ```bash
@@ -196,8 +200,8 @@ uv run mlx_lm.convert \
   --hf-path <model> \
   --mlx-path <output> \
   --quantize \
-  --q-bits 4 \
-  --q-group-size 128
+  --q-bits 5 \
+  --q-group-size 64
 ```
 
 ### Common MLX Operations
@@ -220,8 +224,8 @@ text = generate(model, tokenizer, prompt=prompt, prompt_cache=cache)
 **ALWAYS use uv** - no pip, no conda, no poetry:
 ```bash
 uv sync          # Install/update dependencies
-uv add package   # Add new package
-uv run command   # Run any command (auto-syncs!)
+uv add <package>   # Add new package
+uv run <command> [(args)]   # Run any command (auto-syncs!)
 ```
 
 ### Testing Checklist
@@ -240,15 +244,15 @@ tail -f logs/server.log
 watch -n 1 'ps aux | grep mlx'
 
 # Test model directly
-uv run python -m mlx_lm.generate --model <path> --prompt "test"
+uv run mlx_lm.generate --model <path> --prompt "test"
 ```
 
 ## Common Issues and Solutions
 
 ### DeciLMForCausalLM Architecture
-- Custom architecture not supported by LM Studio
+- Custom architecture not yet supported (june'2025) by LM Studio
 - Use native mlx_lm server instead
-- Ensure model has proper config.json with architecture type
+- Ensure model has proper tokenizer-config.json with correct architecture type
 
 ### Memory Exhaustion
 - Monitor via `/api/v1/models/memory/usage`
