@@ -20,17 +20,14 @@ class ServerConfig(BaseSettings):
     ssl_certfile: Path | None = Field(default=None, env="SSL_CERT")
     ssl_keyfile: Path | None = Field(default=None, env="SSL_KEY")
 
+    # Environment (dev/prod)
+    environment: str = Field(default="prod", env="ENV")
+
     # Domain configuration
     primary_domain: str = Field(default="localhost", env="PRIMARY_DOMAIN")
     tailscale_domain: str = Field(default="", env="TAILSCALE_DOMAIN")
-    allowed_origins: list[str] = Field(
-        default=[
-            "http://localhost:3000",
-            "http://localhost:8000",
-            "http://127.0.0.1:8000",
-        ],
-        env="ALLOWED_ORIGINS"
-    )
+    # Comma-separated list of origins. When empty -> handled in middleware.
+    allowed_origins: str = Field(default="", env="ALLOWED_ORIGINS")
 
     # Model settings
     models_dir: Path = Field(
@@ -79,6 +76,36 @@ class ServerConfig(BaseSettings):
         if v and not v.exists():
             raise ValueError(f"SSL path {v} does not exist")
         return v
+
+    # Utility helpers
+
+    @property
+    def is_dev(self) -> bool:
+        """Return True if running in development environment."""
+        return self.environment.lower() in {"dev", "development", "local"}
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        """Return parsed list of allowed CORS origins.
+
+        If ALLOWED_ORIGINS is empty and we are in dev mode → ["*"].
+        Otherwise split by comma, strip whitespace, discard empties.
+        """
+        if not self.allowed_origins:
+            return ["*"] if self.is_dev else []
+
+        # Provided list - support JSON list or comma separated string
+        raw = self.allowed_origins.strip()
+        if raw.startswith("["):
+            import json
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(o) for o in parsed]
+            except json.JSONDecodeError:
+                pass  # fallback to comma parsing
+
+        return [o.strip() for o in raw.split(",") if o.strip()]
 
     @validator("models_dir")
     def validate_models_dir(cls, v: Path) -> Path:

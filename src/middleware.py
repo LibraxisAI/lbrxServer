@@ -51,14 +51,20 @@ def setup_middleware(app):
     """Configure all middleware for the FastAPI app"""
 
     # CORS
+    cors_origins = config.cors_allowed_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.allowed_origins,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
     )
+
+    if not cors_origins:
+        logger.warning(
+            "No ALLOWED_ORIGINS configured and not in dev mode – CORS disabled."
+        )
 
     # Trusted Host
     trusted_hosts = [
@@ -67,6 +73,7 @@ def setup_middleware(app):
         "localhost",
         "127.0.0.1",
         "178.183.101.202",  # Dragon static IP
+        "testserver",  # pytest/starlette default host
     ]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=trusted_hosts)
 

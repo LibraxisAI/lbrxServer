@@ -83,6 +83,102 @@ cp .env.example .env
 
 # Test the server
 curl http://localhost:9123/api/v1/health
+
+## Deployment on Kubernetes (TLS passthrough via Ingress)
+
+Below is a minimal example of exposing the server on Kubernetes while keeping end-to-end TLS termination **outside** the cluster (e.g. on Cloudflare Tunnel or MetalLB + external LB that already presents the certificate).  
+The Ingress is configured in *passthrough* mode – it only forwards TCP traffic on port 443 directly to the pod, where Uvicorn handles TLS.
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlx-llm-server
+  namespace: llm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlx-llm-server
+  template:
+    metadata:
+      labels:
+        app: mlx-llm-server
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/libraxisai/mlx-llm-server:latest
+          env:
+            - name: SERVER_HOST
+              value: "0.0.0.0"
+            - name: SERVER_PORT
+              value: "443"  # Uvicorn listens on 443 inside the pod
+            - name: SSL_CERT
+              value: "/certs/tls.crt"
+            - name: SSL_KEY
+              value: "/certs/tls.key"
+          ports:
+            - name: https
+              containerPort: 443
+          volumeMounts:
+            - name: tls
+              mountPath: /certs
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: tailscale-cert   # or any Kubernetes TLS secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlx-llm-service
+  namespace: llm
+spec:
+  selector:
+    app: mlx-llm-server
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: llm-ingress
+  namespace: llm
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"       # Preserve TLS
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"         # Pass through TLS
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: llm.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mlx-llm-service
+                port:
+                  number: 443
+```
+
+👉 *Why passthrough?* – MLX needs Apple-silicon nodes, and terminating TLS directly in the pod avoids double encryption plus lets you reuse automatically-rotated Tailscale certificates.
+
+This manifest assumes:
+1. NGINX Ingress Controller built with `--enable-ssl-passthrough`.
+2. TLS secret (`tailscale-cert`) contains a full-chain cert/key pair.
+3. External LB handles traffic on port 443 and forwards to the Ingress.
+
+> For environments where the ingress terminates TLS, simply drop `ssl-passthrough` annotation and listen on port 9123 internally.
 ```
 
 ## Configuration

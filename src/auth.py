@@ -12,7 +12,9 @@ from passlib.context import CryptContext
 from .config import config
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
+# auto_error=False means missing Authorization header won't immediately
+# raise 403 – gives us flexibility for optional authentication.
+security = HTTPBearer(auto_error=False)
 
 
 class AuthManager:

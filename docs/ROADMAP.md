@@ -26,7 +26,27 @@
   - Support for video frames
   - OCR capabilities integration
 
-### 1.2 Performance Optimization
+# ---------------------------------------------------------------------
+# The items below were appended on 2025-06-28 as part of a roadmap refinement
+# sprint.  They introduce concrete quality gates, early tracing and
+# align the roadmap with the state of CI/CD.
+# ---------------------------------------------------------------------
+
+### 1.2 Quality Gates  📈
+
+- [ ] **Test coverage ≥ 80 %** *(KPI)*  
+  • CI must fail if `pytest --cov` drops below 80 % lines.  
+  • Deadline: **2025-12-31** (end of Q4 2025).
+
+- [ ] **Zero Ruff SIM/B904 violations**  
+  • Treat `SIM` (simplify) and `B904` (raise-from) as errors in `ruff`.  
+  • Deadline: **2025-12-31**.
+
+- [x] **Container image CVE gating** *(in progress)*  
+  • Trivy scan added to CI (fails on HIGH/CRITICAL).  
+  • Ongoing: keep vulnerability count at 0.
+
+### 1.3 Performance Optimization
 - [ ] **Request Batching**
   - Batch multiple requests for same model
   - Dynamic batch sizing based on memory
@@ -37,7 +57,14 @@
   - Prompt template caching
   - Common response caching with TTL
 
-### 1.3 Enhanced Session Management
+### 1.4 Observability & Tracing  🔍
+
+- [ ] **Minimal OpenTelemetry tracing**  
+  • FastAPI middleware emitting OTLP spans (route-level).  
+  • Toggle via `ENABLE_TRACING=true`.  
+  • Deadline: **Q3 2025**.
+
+### 1.5 Enhanced Session Management
 - [ ] **Session Analytics**
   - Token usage tracking per session
   - Response time metrics
@@ -175,6 +202,7 @@
 - [ ] Memory leak detection
 - [ ] Dead code elimination
 - [ ] API deprecation strategy
+- [ ] Zero Ruff SIM/B904 warnings (see Phase 1 quality gate)
 
 ## Dependencies & Requirements
 
@@ -198,6 +226,30 @@
 - Current: M3 Ultra (512GB)
 - Future: M4 Ultra support
 - Multi-node M3 Max clusters
+
+## Release Policy
+
+- **Versioning**: Semantic Versioning (MAJOR.MINOR.PATCH).  
+  • MAJOR – breaking API changes.  
+  • MINOR – backward-compatible features and performance improvements.  
+  • PATCH – bug fixes, docs only, CI tweaks.
+
+- **Planned cadences**:  
+  • *Minor* release every **6 weeks**.  
+  • *Patch* release on demand (critical fix) – < 48 h SLA.  
+  • First GA (v1.0.0) already shipped; v1.1.0 planned **2025-08-15**.
+
+- **Branches**:  
+  • `main` – stable, release-tagged.  
+  • `codex` – active development (auto-deploy to staging).  
+  • Feature branches ⇒ PR ➜ `codex` ➜ squash-merge.
+
+- **Release checklist** (CI enforced):  
+  1. Tests & linters green.  
+  2. Coverage ≥ 80 %.  
+  3. Trivy scan: 0 HIGH/CRITICAL.  
+  4. Changelog entry.  
+  5. Tag & GitHub Release created via workflow.
 - Potential cloud deployment
 
 ## Success Metrics

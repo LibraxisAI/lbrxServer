@@ -26,6 +26,11 @@ COPY scripts/ ./scripts/
 # Install dependencies
 RUN uv sync --frozen
 
+# Default runtime environment – overridable at `docker run -e ...`
+ENV SERVER_PORT=9123 \
+    ENABLE_AUTH=false \
+    ENABLE_METRICS=true
+
 # Create necessary directories
 RUN mkdir -p logs models
 
