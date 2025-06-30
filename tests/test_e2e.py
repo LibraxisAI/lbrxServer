@@ -20,12 +20,14 @@ async def test_health_and_models_endpoints() -> None:  # noqa: D103
     # Monkeypatch DotEnvSettingsSource to skip reading .env files during tests
     import pydantic_settings
 
-    original_dotenv_call = pydantic_settings.sources.DotEnvSettingsSource.__call__
-
     def _empty_call(self):  # noqa: D401
         return {}
 
-    pydantic_settings.sources.DotEnvSettingsSource.__call__ = _empty_call  # type: ignore[assignment]
+    monkeypatch.setattr(
+        pydantic_settings.sources.DotEnvSettingsSource,
+        "__call__",
+        _empty_call,
+    )
 
     # -----------------------------------------------------------------
     # Patch model_manager *before* src.main is imported to avoid MLX
