@@ -27,7 +27,7 @@
   - OCR capabilities integration
 
 # ---------------------------------------------------------------------
-# The items below were appended on 2025-06-28 as part of "vibe-coding"
+# The items below were appended on 2025-06-28 as part of a roadmap refinement
 # sprint.  They introduce concrete quality gates, early tracing and
 # align the roadmap with the state of CI/CD.
 # ---------------------------------------------------------------------
