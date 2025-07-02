@@ -92,3 +92,4 @@ temp/
 *.tmp
 *.bak
 CLAUDE.md
+.TerminalSavedOutput.txt

@@ -217,6 +217,10 @@ async def stream_chat_completion(
         yield "data: [DONE]\n\n"
 
     except Exception as e:
+        import traceback
+        logger.error(f"Error in stream_chat_completion: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        
         error_chunk = {
             "error": {
                 "message": str(e),

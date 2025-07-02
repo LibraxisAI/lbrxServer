@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import mlx.core as mx
-from mlx_lm import generate, load
+from mlx_lm import generate, load, stream_generate
 
 from .config import config
 from .model_config import ModelConfig
@@ -185,10 +185,77 @@ class ModelManager:
 
     async def _stream_generate(self, model, tokenizer, prompt, **kwargs):
         """Stream generation (yields tokens)"""
-        # This would use mlx_lm's streaming capabilities
-        # For now, return a simple implementation
-        output = generate(model, tokenizer, prompt, **kwargs)
-        yield output
+        import queue
+        import threading
+        
+        # Create a queue to communicate between threads
+        q = queue.Queue()
+        exception_holder = [None]
+        
+        def _run_stream():
+            try:
+                logger.debug(f"Starting stream_generate with kwargs: {kwargs}")
+                # Remove any None values from kwargs
+                filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+                
+                # MLX specific: ensure we don't pass empty stop_tokens
+                if 'stop_tokens' in filtered_kwargs and not filtered_kwargs['stop_tokens']:
+                    filtered_kwargs.pop('stop_tokens')
+                
+                for response in stream_generate(model, tokenizer, prompt, **filtered_kwargs):
+                    q.put(response)
+                q.put(None)  # Sentinel to signal completion
+            except Exception as e:
+                logger.error(f"Error in stream_generate: {e}")
+                logger.error(f"Error type: {type(e).__name__}")
+                logger.error(f"Prompt: {prompt[:100]}...")
+                logger.error(f"Kwargs: {kwargs}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
+                exception_holder[0] = e
+                q.put(None)
+        
+        # Run the streaming in a separate thread
+        thread = threading.Thread(target=_run_stream)
+        thread.start()
+        
+        # Yield results from queue
+        while True:
+            # Use timeout to allow for periodic checks
+            try:
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None, q.get, True, 0.1
+                )
+                
+                if response is None:  # Sentinel value
+                    if exception_holder[0]:
+                        raise exception_holder[0]
+                    break
+                
+                # Extract text from response
+                if hasattr(response, 'text'):
+                    yield response.text
+                elif hasattr(response, 'token_text'):
+                    yield response.token_text
+                elif hasattr(response, 'delta'):
+                    # MLX stream_generate returns delta text
+                    yield response.delta
+                elif hasattr(response, '__dict__'):
+                    # Log the response structure for debugging
+                    logger.debug(f"Response attributes: {response.__dict__}")
+                    yield str(response)
+                else:
+                    yield str(response)
+                    
+            except queue.Empty:
+                # Check if thread is still alive
+                if not thread.is_alive() and q.empty():
+                    if exception_holder[0]:
+                        raise exception_holder[0]
+                    break
+                await asyncio.sleep(0.01)
+        
+        thread.join()
 
     async def get_or_load_model(self, model_id: str) -> tuple[Any, Any]:
         """Get model, loading if necessary"""
