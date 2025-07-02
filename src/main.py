@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import start_http_server
 
 from .config import config
-from .endpoints import chat, completions, models, sessions
+from .endpoints import chat, completions, models, sessions, vista
 from .middleware import setup_middleware
 from .model_manager import model_manager
 
@@ -62,6 +62,7 @@ app.include_router(chat.router, prefix=f"{config.api_prefix}", tags=["Chat"])
 app.include_router(completions.router, prefix=f"{config.api_prefix}", tags=["Completions"])
 app.include_router(models.router, prefix=f"{config.api_prefix}", tags=["Models"])
 app.include_router(sessions.router, prefix=f"{config.api_prefix}", tags=["Sessions"])
+app.include_router(vista.router, prefix=f"{config.api_prefix}", tags=["VISTA"])
 
 
 @app.get("/")
@@ -117,16 +118,34 @@ def run_server():
     logger.info(f"API available at https://{config.primary_domain}{config.api_prefix}")
     logger.info(f"Also available at https://{config.tailscale_domain}{config.api_prefix}")
 
+    cert_file = config.ssl_certfile
+    key_file = config.ssl_keyfile
+
+    # Fallback to ~/.ssl/dragon.* or origin.* if not provided
+    if cert_file is None or key_file is None:
+        from pathlib import Path
+
+        home_ssl = Path.home() / ".ssl"
+        dragon_crt = home_ssl / "dragon.crt"
+        dragon_key = home_ssl / "dragon.key"
+        origin_crt = home_ssl / "origin.crt"
+        origin_key = home_ssl / "origin.key"
+
+        if dragon_crt.exists() and dragon_key.exists():
+            cert_file, key_file = dragon_crt, dragon_key
+        elif origin_crt.exists() and origin_key.exists():
+            cert_file, key_file = origin_crt, origin_key
+
     uvicorn.run(
-        "src.main:app",
+        app,
         host=config.host,
         port=config.port,
-        ssl_certfile=str(config.ssl_certfile),
-        ssl_keyfile=str(config.ssl_keyfile),
+        ssl_certfile=str(cert_file) if cert_file else None,
+        ssl_keyfile=str(key_file) if key_file else None,
         workers=config.workers,
         log_level="info",
         access_log=True,
-        reload=False  # Set to True for development
+        reload=False,  # Set to True for development
     )
 
 

@@ -13,7 +13,8 @@ class ServerConfig(BaseSettings):
 
     # Server settings
     host: str = Field(default="0.0.0.0", env="SERVER_HOST")
-    port: int = Field(default=9123, env="SERVER_PORT")
+    # Default HTTPS port for LLM server
+    port: int = Field(default=8555, env="SERVER_PORT")
     workers: int = Field(default=1, env="SERVER_WORKERS")  # MLX works best with single worker
 
     # SSL/TLS settings (optional)
