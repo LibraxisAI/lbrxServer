@@ -1,0 +1,50 @@
+[Unit]
+Description=LBRXServer Anti-Crash Supervisor
+Documentation=https://github.com/LibraxisAI/lbrxserver
+After=network.target redis.service
+Wants=redis.service
+
+[Service]
+Type=simple
+User=polyversai
+Group=polyversai
+WorkingDirectory=/Users/polyversai/hosted_dev/lbrxserver
+
+# Python environment
+Environment="PATH=/Users/polyversai/.local/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/Users/polyversai/hosted_dev/lbrxserver"
+Environment="PYTHONUNBUFFERED=1"
+
+# No memory limits - as requested
+Environment="MLX_MEMORY_LIMIT=0"
+Environment="MLX_CACHE_LIMIT=0"
+
+# Start supervisor
+ExecStart=/Users/polyversai/.local/bin/uv run python -m src.supervisor.supervisor
+
+# Restart policy - supervisor handles its own child restarts
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=300
+
+# Resource limits - NO LIMITS as requested
+LimitNOFILE=65536
+LimitNPROC=4096
+# No memory limit
+LimitAS=infinity
+LimitRSS=infinity
+LimitDATA=infinity
+
+# Logging
+StandardOutput=append:/var/log/lbrx-supervisor/supervisor.log
+StandardError=append:/var/log/lbrx-supervisor/supervisor_error.log
+
+# Security
+PrivateTmp=false
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/Users/polyversai/hosted_dev/lbrxserver /tmp /var/log/lbrx-supervisor
+
+[Install]
+WantedBy=multi-user.target

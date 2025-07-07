@@ -14,7 +14,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from ..models import ChatCompletionRequest, ChatMessage  # Re-use existing types
+from ..models import ChatCompletionRequest  # Re-use existing types
 from ..model_router import create_chat_completion
 from ..config import config
 
@@ -93,8 +93,8 @@ async def generate_soap(payload: SOAPRequest) -> Dict[str, Any]:
     request_body = ChatCompletionRequest(
         model=p.model or config.default_model,
         messages=[
-            ChatMessage(role="system", content=system_prompt),
-            ChatMessage(role="user", content=prompt),
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
         ],
         temperature=0.3,
         max_tokens=1000,

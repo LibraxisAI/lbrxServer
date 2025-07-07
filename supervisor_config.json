@@ -1,0 +1,42 @@
+{
+  "services": {
+    "llm_server": {
+      "command": ["python", "-m", "src.main"],
+      "working_dir": "/Users/polyversai/hosted_dev/lbrxserver",
+      "env": {
+        "PYTHONPATH": "/Users/polyversai/hosted_dev/lbrxserver",
+        "MLX_MEMORY_LIMIT": "0",
+        "MLX_CACHE_LIMIT": "0",
+        "DISABLE_JIT_LOADING": "true"
+      },
+      "health_endpoint": "http://localhost:8555/api/v1/health",
+      "startup_delay": 90,
+      "memory_threshold_gb": 280,
+      "max_memory_gb": 0,
+      "restart_on_memory_exceeded": false
+    }
+  },
+  "queue_dir": "/tmp/lbrx_queue",
+  "health_check_interval": 30,
+  "restart_delay": 10,
+  "max_restart_attempts": 20,
+  "restart_window_minutes": 30,
+  "log_dir": "/var/log/lbrx_supervisor",
+  "request_replay": {
+    "enabled": true,
+    "max_retries": 3,
+    "retry_delay": 5
+  },
+  "crash_dumps": {
+    "enabled": true,
+    "directory": "/tmp/lbrx_crashes",
+    "max_dumps": 10
+  },
+  "monitoring": {
+    "memory_check_interval": 10,
+    "log_rotation": {
+      "max_size_mb": 100,
+      "backup_count": 5
+    }
+  }
+}

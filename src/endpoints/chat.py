@@ -3,11 +3,13 @@ Chat completion endpoints with ChukSessions integration
 """
 import asyncio
 import json
+import logging
+import re
 import time
 import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
 from ..auth import verify_auth
@@ -18,6 +20,7 @@ from ..model_manager import model_manager
 from ..model_router import ModelRouter
 from ..models import ChatCompletionChunk, ChatCompletionRequest, ChatCompletionResponse, Choice, Message, Usage
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Initialize session manager
@@ -28,16 +31,33 @@ async def get_session_manager() -> SessionManager:
     global session_manager
     if session_manager is None:
         session_manager = SessionManager(
-            storage_type="redis" if "redis://" in config.redis_url else "memory",
-            redis_url=config.redis_url if "redis://" in config.redis_url else None,
-            default_ttl=config.session_ttl_hours * 3600,  # Convert hours to seconds
+            sandbox_id="lbrxserver",
+            # TODO: Add proper session factory for Redis support
         )
-        await session_manager.initialize()
     return session_manager
 
 
+def extract_content_from_thinking(text: str) -> str:
+    """Extract content outside of <think>...</think> tags"""
+    # Pattern to match <think>...</think> tags (including multiline content)
+    think_pattern = r'<think>.*?</think>'
+    
+    # Remove all think blocks
+    cleaned_text = re.sub(think_pattern, '', text, flags=re.DOTALL)
+    
+    # Clean up extra whitespace
+    cleaned_text = cleaned_text.strip()
+    
+    # If nothing left after removing think tags, return original
+    if not cleaned_text:
+        logger.warning("Response contained only thinking tags, returning full response")
+        return text
+    
+    return cleaned_text
+
+
 @router.post("/chat/completions")
-@limiter.limit(f"{config.rate_limit_per_minute}/minute")
+# @limiter.limit(f"{config.rate_limit_per_minute}/minute")  # Temporarily disabled - causing issues
 async def create_chat_completion(
     request: ChatCompletionRequest,
     auth: dict = Depends(verify_auth)
@@ -112,7 +132,7 @@ async def create_chat_completion(
             )
         else:
             # Non-streaming response
-            output = await model_manager.generate_completion(
+            raw_output = await model_manager.generate_completion(
                 model_id=request.model,
                 messages=messages,
                 temperature=request.temperature,
@@ -121,6 +141,13 @@ async def create_chat_completion(
                 stop=request.stop,
                 stream=False
             )
+            
+            # Extract content outside of thinking tags
+            output = extract_content_from_thinking(raw_output)
+            
+            # Log if we had to clean thinking tags
+            if raw_output != output:
+                logger.info(f"Cleaned thinking tags from response. Original length: {len(raw_output)}, cleaned: {len(output)}")
 
             # Save assistant response to session if using sessions
             if request.session_id:
@@ -184,7 +211,11 @@ async def stream_chat_completion(
         yield f"data: {chunk.json()}\n\n"
 
         # Generate content
-        async for token in model_manager.generate_completion(
+        # Buffer for streaming think tag removal
+        buffer = ""
+        in_think_tag = False
+        
+        async for token in await model_manager.generate_completion(
             model_id=request.model,
             messages=messages,
             temperature=request.temperature,
@@ -193,15 +224,43 @@ async def stream_chat_completion(
             stop=request.stop,
             stream=True
         ):
-            chunk = ChatCompletionChunk(
-                id=completion_id,
-                object="chat.completion.chunk",
-                created=created,
-                model=request.model,
-                system_fingerprint=f"mlx-{config.primary_domain}",
-                choices=[{"index": 0, "delta": {"content": token}, "finish_reason": None}]
-            )
-            yield f"data: {chunk.json()}\n\n"
+            buffer += token
+            
+            # Check if we're entering or leaving a think tag
+            if "<think>" in buffer and not in_think_tag:
+                # Extract content before think tag
+                before_think = buffer.split("<think>")[0]
+                if before_think:
+                    chunk = ChatCompletionChunk(
+                        id=completion_id,
+                        object="chat.completion.chunk",
+                        created=created,
+                        model=request.model,
+                        system_fingerprint=f"mlx-{config.primary_domain}",
+                        choices=[{"index": 0, "delta": {"content": before_think}, "finish_reason": None}]
+                    )
+                    yield f"data: {chunk.json()}\n\n"
+                buffer = buffer[len(before_think):]
+                in_think_tag = True
+            
+            elif "</think>" in buffer and in_think_tag:
+                # Skip everything up to and including </think>
+                buffer = buffer.split("</think>", 1)[1]
+                in_think_tag = False
+            
+            elif not in_think_tag and not "<think" in buffer:
+                # Stream content if we're not in a think tag
+                chunk = ChatCompletionChunk(
+                    id=completion_id,
+                    object="chat.completion.chunk",
+                    created=created,
+                    model=request.model,
+                    system_fingerprint=f"mlx-{config.primary_domain}",
+                    choices=[{"index": 0, "delta": {"content": token}, "finish_reason": None}]
+                )
+                yield f"data: {chunk.json()}\n\n"
+                buffer = ""
+            
             await asyncio.sleep(0)  # Allow other tasks to run
 
         # Final chunk

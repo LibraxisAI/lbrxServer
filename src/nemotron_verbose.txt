@@ -1,0 +1,69 @@
+Note: Unnecessary use of -X or --request, POST is already inferred.
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0* Host llm.libraxis.cloud:443 was resolved.
+* IPv6: (none)
+* IPv4: 104.26.3.14, 104.26.2.14, 172.67.68.180
+*   Trying 104.26.3.14:443...
+* Connected to llm.libraxis.cloud (104.26.3.14) port 443
+* ALPN: curl offers h2,http/1.1
+* (304) (OUT), TLS handshake, Client hello (1):
+} [323 bytes data]
+*  CAfile: /etc/ssl/cert.pem
+*  CApath: none
+* (304) (IN), TLS handshake, Server hello (2):
+{ [122 bytes data]
+* (304) (IN), TLS handshake, Unknown (8):
+{ [19 bytes data]
+* (304) (IN), TLS handshake, Certificate (11):
+{ [2540 bytes data]
+* (304) (IN), TLS handshake, CERT verify (15):
+{ [80 bytes data]
+* (304) (IN), TLS handshake, Finished (20):
+{ [36 bytes data]
+* (304) (OUT), TLS handshake, Finished (20):
+} [36 bytes data]
+* SSL connection using TLSv1.3 / AEAD-CHACHA20-POLY1305-SHA256 / [blank] / UNDEF
+* ALPN: server accepted h2
+* Server certificate:
+*  subject: CN=libraxis.cloud
+*  start date: May 19 03:27:34 2025 GMT
+*  expire date: Aug 17 04:27:10 2025 GMT
+*  subjectAltName: host "llm.libraxis.cloud" matched cert's "*.libraxis.cloud"
+*  issuer: C=US; O=Google Trust Services; CN=WE1
+*  SSL certificate verify ok.
+* using HTTP/2
+* [HTTP/2] [1] OPENED stream for https://llm.libraxis.cloud/api/v1/chat/completions
+* [HTTP/2] [1] [:method: POST]
+* [HTTP/2] [1] [:scheme: https]
+* [HTTP/2] [1] [:authority: llm.libraxis.cloud]
+* [HTTP/2] [1] [:path: /api/v1/chat/completions]
+* [HTTP/2] [1] [user-agent: curl/8.7.1]
+* [HTTP/2] [1] [accept: */*]
+* [HTTP/2] [1] [content-type: application/json]
+* [HTTP/2] [1] [content-length: 169]
+> POST /api/v1/chat/completions HTTP/2
+> Host: llm.libraxis.cloud
+> User-Agent: curl/8.7.1
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 169
+> 
+} [169 bytes data]
+* upload completely sent off: 169 bytes
+< HTTP/2 500 
+< date: Mon, 07 Jul 2025 06:35:01 GMT
+< content-type: application/json
+< content-length: 91
+< server: cloudflare
+< cf-cache-status: DYNAMIC
+< nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+< strict-transport-security: max-age=15552000
+< report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=n8f5oQddMs0KA1tF8p5LRZJCwMknAwRkqFwpkK1NBIwUGYCkPnqtUIxYL0U3eDoKRryVJuOX4R7MamSCon14MfjRpoHcabT%2BIlHoCZF0a0Tu"}]}
+< cf-ray: 95b551c6b8d830e8-FRA
+< alt-svc: h3=":443"; ma=86400
+< 
+{ [91 bytes data]
+100   260  100    91  100   169    415    771 --:--:-- --:--:-- --:--:--  1187
+* Connection #0 to host llm.libraxis.cloud left intact
+{"error":{"message":"Internal server error","type":"server_error","code":"internal_error"}}

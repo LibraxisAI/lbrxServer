@@ -10,9 +10,10 @@ from fastapi.responses import JSONResponse
 from prometheus_client import start_http_server
 
 from .config import config
-from .endpoints import chat, completions, models, sessions, vista
+from .endpoints import chat, completions, models, sessions
 from .middleware import setup_middleware
 from .model_manager import model_manager
+# from .supervisor.request_middleware import RequestPersistenceMiddleware  # TODO: Enable after testing
 
 # Configure logging
 logging.basicConfig(
@@ -28,9 +29,17 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting MLX LLM Server...")
 
-    # Initialize model manager
-    await model_manager.initialize()
-    logger.info(f"Default model loaded: {config.default_model}")
+    # Check if JIT loading is disabled (NEW DEFAULT!)
+    disable_jit = config.__dict__.get("disable_jit_loading", True)
+    if disable_jit:
+        logger.info("🔒 JIT model loading is DISABLED - using persistent models only")
+        from .model_preloader import preloader
+        await preloader.load_all_persistent_models()
+    else:
+        # Legacy behavior (deprecated)
+        logger.warning("⚠️  JIT model loading is ENABLED - this is deprecated!")
+        await model_manager.initialize()
+        logger.info(f"Default model loaded: {config.default_model}")
 
     # Start metrics server
     if config.enable_metrics:
@@ -57,12 +66,15 @@ app = FastAPI(
 # Setup middleware
 app = setup_middleware(app)
 
+# Add request persistence middleware for crash recovery
+# app.add_middleware(RequestPersistenceMiddleware, queue_dir="/tmp/lbrx_queue")  # TODO: Enable after testing
+
 # Include routers
 app.include_router(chat.router, prefix=f"{config.api_prefix}", tags=["Chat"])
 app.include_router(completions.router, prefix=f"{config.api_prefix}", tags=["Completions"])
 app.include_router(models.router, prefix=f"{config.api_prefix}", tags=["Models"])
 app.include_router(sessions.router, prefix=f"{config.api_prefix}", tags=["Sessions"])
-app.include_router(vista.router, prefix=f"{config.api_prefix}", tags=["VISTA"])
+# app.include_router(vista.router, prefix=f"{config.api_prefix}", tags=["VISTA"])
 
 
 @app.get("/")

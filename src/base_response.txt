@@ -1,0 +1,4 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   231  100   231    0     0   1016      0 --:--:-- --:--:-- --:--:--  1017
+{"service":"MLX LLM Server","version":"1.0.0","status":"operational","endpoints":{"chat":"/api/v1/chat/completions","completions":"/api/v1/completions","models":"/api/v1/models","sessions":"/api/v1/sessions","docs":"/api/v1/docs"}}

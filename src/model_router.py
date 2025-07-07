@@ -9,25 +9,40 @@ logger = logging.getLogger(__name__)
 class ModelRouter:
     """Routes requests to appropriate models based on service type"""
 
+    # WHITELIST ONLY - NO JIT LOADING!
+    ALLOWED_MODELS: set[str] = {
+        "nemotron-49b",
+        "LibraxisAI/Llama-3_3-Nemotron-Super-49B-v1-MLX-Q5",
+        "nemotron-253b",  # Ultra!
+        "qwen3-14b",
+        "LibraxisAI/Qwen3-14b-MLX-Q5",
+        "qwq-32b",  # Reasoning
+        "LibraxisAI/QwQ-32B-MLX-Q5",
+        "c4ai-03-2025",  # medical
+        "LibraxisAI/c4ai-command-a-03-2025-q5-mlx",
+        "whisper-large-v3",
+        "nanonets-ocr",  # OCR
+    }
+
     # Service to model mapping
     SERVICE_MODELS: dict[str, str] = {
-        # Medical reasoning - needs large, smart model
-        "vista": "qwen3-14b",  # or full path if needed
+        # Medical reasoning - c4ai is working!
+        "vista": "c4ai-03-2025",  # Medical model loaded at 88GB
 
         # Code generation - DeepSeek excels at code
-        "forkmeASAPp": "deepseek-coder",
+        "forkmeASAPp": "deepseek-coder-v2",
 
         # Data analysis - Qwen handles data well
         "anydatanext": "qwen3-14b",
 
-        # Voice synthesis prep - small, fast model
-        "lbrxvoice": "phi-3",
+        # Voice synthesis prep - use fast model
+        "lbrxvoice": "qwen3-14b",  # Better quality than 1.7b
 
         # Whisper is separate - not an LLM
         "whisplbrx": "whisper-large-v3",
 
         # Default for unknown services
-        "default": "default"
+        "default": "qwen3-14b"  # Our workhorse
     }
 
     # User-specific overrides (VIP treatment)
@@ -55,7 +70,7 @@ class ModelRouter:
         Determine which model to use for a request
         
         Priority:
-        1. Explicitly requested model
+        1. Explicitly requested model (IF WHITELISTED)
         2. User override
         3. Service-based routing
         4. Default model
@@ -69,10 +84,14 @@ class ModelRouter:
         Returns:
             Model ID to use
         """
-        # 1. Explicit model request takes precedence
+        # 1. Explicit model request takes precedence (BUT MUST BE WHITELISTED!)
         if requested_model and requested_model != "default":
-            logger.info(f"Using explicitly requested model: {requested_model}")
-            return requested_model
+            if requested_model not in cls.ALLOWED_MODELS:
+                logger.warning(f"Requested model {requested_model} not in whitelist! Available: {cls.ALLOWED_MODELS}")
+                # Fall through to service routing
+            else:
+                logger.info(f"Using explicitly requested model: {requested_model}")
+                return requested_model
 
         # 2. Check user overrides
         if user and user in cls.USER_OVERRIDES:

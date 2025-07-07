@@ -45,7 +45,7 @@ class ModelConfig:
             "id": "LibraxisAI/Qwen3-14b-MLX-Q5",
             "type": ModelType.LLM,
             "description": "Qwen3 14B Q5 - Premium quality, excellent reasoning",
-            "memory_gb": 10,
+            "memory_gb": 12,  # +2GB for inference
             "context_length": 32768,
             "auto_load": True,
             "priority": 1
@@ -69,6 +69,53 @@ class ModelConfig:
             "context_length": 131072,
             "auto_load": False,
             "priority": 7
+        },
+
+        # Medical/Scientific models
+        "c4ai-03-2025": {
+            "id": "LibraxisAI/c4ai-command-a-03-2025-q5-mlx",
+            "type": ModelType.LLM,
+            "description": "C4AI 03-2025 111B Dense - Scientifical/Medical excellence with internal reasoning",
+            "memory_gb": 87,  # +2GB for inference
+            "context_length": 131072,
+            "auto_load": False,
+            "priority": 2
+        },
+        "nemotron-49b": {
+            "id": "LibraxisAI/Llama-3_3-Nemotron-Super-49B-v1-MLX-Q5",
+            "type": ModelType.LLM,
+            "description": "Nemotron Super 49B - High quality reasoning",
+            "memory_gb": 51,  # +2GB for inference
+            "context_length": 131072,
+            "auto_load": True,
+            "priority": 1
+        },
+        "nemotron-253b": {
+            "id": "LibraxisAI/Llama-3_1-Nemotron-Ultra-253B-v1-mlx-q5",
+            "type": ModelType.LLM,
+            "description": "Nemotron Ultra 253B - Ultimate quality",
+            "memory_gb": 253,
+            "context_length": 131072,
+            "auto_load": False,
+            "priority": 1
+        },
+        "qwq-32b": {
+            "id": "LibraxisAI/QwQ-32B-MLX-Q5",
+            "type": ModelType.LLM,
+            "description": "QwQ 32B - Superior reasoning with thinking mode",
+            "memory_gb": 34,  # +2GB for inference
+            "context_length": 32768,
+            "auto_load": True,
+            "priority": 3
+        },
+        "qwen3-30b-moe": {
+            "id": "Qwen/Qwen3-30B-A3B-MLX-Q5",
+            "type": ModelType.LLM,
+            "description": "Qwen3 30B MoE (3B active) - Efficient reasoning",
+            "memory_gb": 20,
+            "context_length": 32768,
+            "auto_load": False,
+            "priority": 4
         },
 
         # Vision models
@@ -157,6 +204,12 @@ MODEL_ALIASES = {
     # LibraxisAI models
     "qwen": "qwen3-14b",
     "qwen3": "qwen3-14b",
+    
+    # Medical/Scientific
+    "c4ai": "c4ai-03-2025",
+    "medical": "c4ai-03-2025",
+    "scientific": "c4ai-03-2025",
+    "vista": "c4ai-03-2025",  # Override for Vista to use best medical model
 
     # Common model name shortcuts
     "llama": "llama-3.2-3b",

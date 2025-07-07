@@ -23,6 +23,10 @@ dependencies = [
     "numpy<2.0.0",
     "ruff>=0.12.1",
     "pydantic-settings>=2.10.1",
+    "psutil>=7.0.0",
+    "aiofiles>=24.1.0",
+    "loguru>=0.7.3",
+    "aiohttp>=3.12.13",
 ]
 
 [project.optional-dependencies]

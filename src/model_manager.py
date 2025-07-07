@@ -9,11 +9,16 @@ from typing import Any
 
 import mlx.core as mx
 from mlx_lm import generate, load, stream_generate
+from mlx_lm.sample_utils import make_sampler
 
 from .config import config
 from .model_config import ModelConfig
 
 logger = logging.getLogger(__name__)
+
+# EMERGENCY FIX: Serialize Metal calls to prevent concurrent encoding crash
+# mgbook16 found this bug - only ONE model call at a time!
+_metal_semaphore = asyncio.Semaphore(1)
 
 
 class ModelManager:
@@ -26,10 +31,12 @@ class ModelManager:
         self._lock = asyncio.Lock()
         self.vlm_models: dict[str, Any] = {}  # For VLM models
 
-        # Set MLX memory limits
-        if config.max_model_memory_gb > 0:
-            mx.metal.set_memory_limit(config.max_model_memory_gb * 1024**3)
-            mx.metal.set_cache_limit(min(100, config.max_model_memory_gb // 4) * 1024**3)
+        # NO MEMORY LIMITS - as requested by user
+        # "zwiekszyć memory na no limit (znamy przecież rozmiary modeli)"
+        # Set to 0 = unlimited, we trust MLX to handle memory properly
+        mx.metal.set_memory_limit(0)  # 0 = no limit
+        mx.metal.set_cache_limit(0)   # 0 = no limit
+        logger.info("Memory limits DISABLED - running with no limits as requested")
 
     async def initialize(self):
         """Initialize with auto-load models"""
@@ -39,12 +46,12 @@ class ModelManager:
 
         # Load other auto-load models
         auto_load_models = ModelConfig.get_auto_load_models()
-        for model_config in auto_load_models:
-            if model_config["id"] != config.default_model:
+        for model_id in auto_load_models:
+            if model_id != config.default_model:
                 try:
-                    await self.load_model(model_config["id"])
+                    await self.load_model(model_id)
                 except Exception as e:
-                    logger.error(f"Failed to auto-load {model_config['id']}: {e}")
+                    logger.error(f"Failed to auto-load {model_id}: {e}")
 
     async def load_model(self, model_id: str) -> tuple[Any, Any]:
         """Load a model if not already loaded"""
@@ -155,11 +162,17 @@ class ModelManager:
             # Fallback to simple concatenation
             prompt = self._format_messages(messages)
 
-        # Generation parameters
+        # Generation parameters for MLX
+        # Create sampler with temperature and top_p
+        sampler = make_sampler(
+            temp=temperature,
+            top_p=top_p,
+            min_tokens_to_keep=1
+        )
+        
         gen_kwargs = {
-            "temp": temperature,
-            "top_p": top_p,
             "max_tokens": max_tokens or config.max_tokens_default,
+            "sampler": sampler,
         }
 
         if stop:
@@ -173,17 +186,19 @@ class ModelManager:
             if stop_ids:
                 gen_kwargs["stop_tokens"] = stop_ids
 
-        # Generate
-        if stream:
-            return self._stream_generate(model, tokenizer, prompt, **gen_kwargs)
-        else:
-            loop = asyncio.get_event_loop()
-            output = await loop.run_in_executor(
-                None, generate, model, tokenizer, prompt, **gen_kwargs
-            )
-            return output
+        # Generate with Metal semaphore protection
+        async with _metal_semaphore:
+            if stream:
+                return self._stream_generate(model, tokenizer, prompt, **gen_kwargs)
+            else:
+                loop = asyncio.get_event_loop()
+                output = await loop.run_in_executor(
+                    None, 
+                    lambda: generate(model, tokenizer, prompt, **gen_kwargs)
+                )
+                return output
 
-    async def _stream_generate(self, model, tokenizer, prompt, **kwargs):
+    async def _stream_generate(self, model, tokenizer, prompt, **gen_kwargs):
         """Stream generation (yields tokens)"""
         import queue
         import threading
@@ -194,15 +209,14 @@ class ModelManager:
         
         def _run_stream():
             try:
-                logger.debug(f"Starting stream_generate with kwargs: {kwargs}")
-                # Remove any None values from kwargs
-                filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+                logger.debug(f"Starting stream_generate with kwargs: {gen_kwargs}")
                 
-                # MLX specific: ensure we don't pass empty stop_tokens
-                if 'stop_tokens' in filtered_kwargs and not filtered_kwargs['stop_tokens']:
-                    filtered_kwargs.pop('stop_tokens')
-                
-                for response in stream_generate(model, tokenizer, prompt, **filtered_kwargs):
+                for response in stream_generate(
+                    model, 
+                    tokenizer, 
+                    prompt,
+                    **gen_kwargs
+                ):
                     q.put(response)
                 q.put(None)  # Sentinel to signal completion
             except Exception as e:

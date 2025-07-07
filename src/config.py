@@ -43,8 +43,11 @@ class ServerConfig(BaseSettings):
 
     # API settings
     api_prefix: str = Field(default="/api/v1", env="API_PREFIX")
-    max_tokens_default: int = Field(default=2048, env="MAX_TOKENS_DEFAULT")
+    max_tokens_default: int = Field(default=16384, env="MAX_TOKENS_DEFAULT")
     max_tokens_limit: int = Field(default=32768, env="MAX_TOKENS_LIMIT")
+    
+    # Model loading control
+    disable_jit_loading: bool = Field(default=True, env="DISABLE_JIT_LOADING")
 
     # Redis settings for ChukSessions
     redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
